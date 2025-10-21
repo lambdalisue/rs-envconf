@@ -1,123 +1,161 @@
-# envconf
+# serviceconf
 
-[![Build](https://github.com/lambdalisue/rs-envconf/actions/workflows/build.yml/badge.svg)](https://github.com/lambdalisue/rs-envconf/actions/workflows/build.yml)
+[![Build](https://github.com/lambdalisue/rs-serviceconf/actions/workflows/build.yml/badge.svg)](https://github.com/lambdalisue/rs-serviceconf/actions/workflows/build.yml)
 
-A declarative Rust library for loading configuration from environment variables with file-based secret support.
+**Environment variable configuration with file-based secrets support**
+
+Load configuration from environment variables with native support for **file-based secrets** (Kubernetes Secrets, Docker Secrets). This is the primary feature that distinguishes `serviceconf` from other environment variable configuration libraries.
+
+## Key Feature: File-based Secrets
+
+The `#[conf(from_file)]` attribute allows reading secrets from files mounted by Kubernetes or Docker, avoiding the security risks of exposing secrets directly in environment variables:
+
+```rust
+use serviceconf::ServiceConf;
+
+#[derive(ServiceConf)]
+struct Config {
+    #[conf(from_file)]
+    pub api_key: String,  // Reads from API_KEY or API_KEY_FILE
+
+    #[conf(from_file)]
+    pub database_password: String,
+}
+```
+
+**Why file-based secrets?**
+- ✅ **More secure**: Secrets stored in files, not environment variables (which can leak in logs, process lists, etc.)
+- ✅ **Kubernetes native**: Works seamlessly with Kubernetes Secrets mounting
+- ✅ **Docker Secrets**: Direct support for Docker Swarm secrets
+- ✅ **Flexible**: Falls back to direct environment variables for local development
+
+**Loading priority:**
+1. Direct env var (`API_KEY`) - for local development
+2. File path from env var (`API_KEY_FILE`) - for production
+
+**Kubernetes Secret example:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+stringData:
+  api-key: "prod-api-key-123"
+  db-password: "secure-password"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myservice
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: myservice:latest
+        env:
+          - name: API_KEY_FILE
+            value: /etc/secrets/api-key
+          - name: DATABASE_PASSWORD_FILE
+            value: /etc/secrets/db-password
+        volumeMounts:
+          - name: secrets
+            mountPath: /etc/secrets
+            readOnly: true
+      volumes:
+        - name: secrets
+          secret:
+            secretName: app-secrets
+            items:
+              - key: api-key
+                path: api-key
+              - key: db-password
+                path: db-password
+```
+
+**Local development** (no files needed):
+```bash
+export API_KEY=dev-key-123
+export DATABASE_PASSWORD=dev-password
+```
 
 ## Installation
 
 ```toml
 [dependencies]
-envconf = { git = "https://github.com/lambdalisue/rs-envconf" }
+serviceconf = { git = "https://github.com/lambdalisue/rs-serviceconf" }
 ```
 
 ## Quick Start
 
 ```rust
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
-    pub database_url: String,
+    #[conf(from_file)]
+    pub api_key: String,
+
+    #[conf(default = 8080)]
     pub port: u16,
 }
 
 fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
-    println!("{:?}", config);
+    println!("Port: {}", config.port);
     Ok(())
 }
 ```
 
+**Local development** (direct environment variable):
 ```bash
-export DATABASE_URL=postgres://localhost/db
-export PORT=5432
+export API_KEY=dev-key-123
+export PORT=3000
 ```
 
-## Core Features
+**Production** (Kubernetes/Docker with file-based secret):
+```bash
+export API_KEY_FILE=/run/secrets/api-key
+export PORT=8080
+```
 
-### 1. Required Fields
+## Other Features
 
-Fields without attributes are required. Missing environment variables cause an error.
+### Default Values
+
+Use `#[conf(default)]` for `Default::default()` or `#[conf(default = value)]` for explicit values.
 
 ```rust
-#[derive(EnvConf)]
+#[derive(ServiceConf)]
 struct Config {
-    pub api_key: String,  // Required: error if API_KEY not set
+    #[conf(default = 8080)]
+    pub port: u16,  // 8080 if PORT not set
+
+    #[conf(default = "localhost".to_string())]
+    pub host: String,  // "localhost" if HOST not set
 }
 ```
 
-### 2. Optional Fields
+### Optional Fields
 
 Use `Option<T>` for optional fields. Returns `None` if not set.
 
 ```rust
-#[derive(EnvConf)]
+#[derive(ServiceConf)]
 struct Config {
     pub api_key: Option<String>,  // None if API_KEY not set
-    pub port: Option<u16>,         // None if PORT not set
 }
 ```
 
-```bash
-# api_key will be None, port will be Some(8080)
-export PORT=8080
-```
+### Prefix
 
-### 3. Default Values
-
-Use `#[env(default)]` for `Default::default()` or `#[env(default = value)]` for explicit values.
+Use `#[conf(prefix = "...")]` at struct level to prefix all environment variables.
 
 ```rust
-#[derive(EnvConf)]
-struct Config {
-    #[env(default)]
-    pub host: String,  // "" if HOST not set
-
-    #[env(default = 8080)]
-    pub port: u16,  // 8080 if PORT not set
-
-    #[env(default = "localhost".to_string())]
-    pub server: String,  // "localhost" if SERVER not set
-}
-```
-
-### 4. File-based Secrets
-
-Use `#[env(from_file)]` to load from files (Kubernetes Secrets, Docker Secrets).
-
-```rust
-#[derive(EnvConf)]
-struct Config {
-    #[env(from_file)]
-    pub api_key: String,  // Reads from API_KEY or API_KEY_FILE
-}
-```
-
-Priority:
-
-1. Direct env var (`API_KEY`)
-2. File path from env var (`API_KEY_FILE`)
-
-Kubernetes example:
-
-```yaml
-env:
-  - name: API_KEY_FILE
-    value: /etc/secrets/api-key
-volumeMounts:
-  - name: secrets
-    mountPath: /etc/secrets
-    readOnly: true
-```
-
-### 5. Prefix
-
-Use `#[env(prefix = "...")]` at struct level to prefix all environment variables.
-
-```rust
-#[derive(EnvConf)]
-#[env(prefix = "MYAPP_")]
+#[derive(ServiceConf)]
+#[conf(prefix = "MYAPP_")]
 struct Config {
     pub database_url: String,  // Reads from MYAPP_DATABASE_URL
     pub api_key: String,       // Reads from MYAPP_API_KEY
@@ -129,21 +167,21 @@ export MYAPP_DATABASE_URL=postgres://localhost/db
 export MYAPP_API_KEY=secret123
 ```
 
-### 6. Custom Environment Variable Names
+### Custom Environment Variable Names
 
-Use `#[env(name = "...")]` to override the auto-generated name.
+Use `#[conf(name = "...")]` to override the auto-generated name.
 
 ```rust
-#[derive(EnvConf)]
+#[derive(ServiceConf)]
 struct Config {
-    #[env(name = "POSTGRES_URL")]
+    #[conf(name = "POSTGRES_URL")]
     pub database_url: String,  // Reads from POSTGRES_URL, not DATABASE_URL
 }
 ```
 
-### 7. Custom Deserializers
+### Custom Deserializers
 
-Use `#[env(deserializer = "function")]` for complex types or custom parsing.
+Use `#[conf(deserializer = "function")]` for complex types or custom parsing.
 
 ```rust
 // Custom parser
@@ -151,18 +189,18 @@ fn comma_separated(s: &str) -> Result<Vec<String>, String> {
     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
 }
 
-#[derive(EnvConf)]
+#[derive(ServiceConf)]
 struct Config {
     // JSON array
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub tags: Vec<String>,
 
     // Comma-separated
-    #[env(deserializer = "comma_separated")]
+    #[conf(deserializer = "comma_separated")]
     pub features: Vec<String>,
 
     // TOML (requires toml crate)
-    #[env(deserializer = "toml::from_str")]
+    #[conf(deserializer = "toml::from_str")]
     pub settings: MySettings,
 }
 ```
@@ -178,51 +216,51 @@ export FEATURES=feature1,feature2,feature3
 
 | Attribute                    | Description                                  |
 | ---------------------------- | -------------------------------------------- |
-| `#[env(prefix = "PREFIX_")]` | Add prefix to all environment variable names |
+| `#[conf(prefix = "PREFIX_")]` | Add prefix to all environment variable names |
 
 ### Field-level Attributes
 
 | Attribute                     | Description                         | When to Use                                  |
 | ----------------------------- | ----------------------------------- | -------------------------------------------- |
-| `#[env(name = "VAR")]`        | Override environment variable name  | When field name differs from desired env var |
-| `#[env(default)]`             | Use `Default::default()` if not set | For optional fields with sensible defaults   |
-| `#[env(default = value)]`     | Use explicit default value          | When you need a specific default             |
-| `#[env(from_file)]`           | Support `{VAR}_FILE` pattern        | For secrets stored in files                  |
-| `#[env(deserializer = "fn")]` | Use custom parser                   | For complex types (Vec, HashMap, etc.)       |
+| `#[conf(name = "VAR")]`        | Override environment variable name  | When field name differs from desired env var |
+| `#[conf(default)]`             | Use `Default::default()` if not set | For optional fields with sensible defaults   |
+| `#[conf(default = value)]`     | Use explicit default value          | When you need a specific default             |
+| `#[conf(from_file)]`           | Support `{VAR}_FILE` pattern        | For secrets stored in files                  |
+| `#[conf(deserializer = "fn")]` | Use custom parser                   | For complex types (Vec, HashMap, etc.)       |
 
 ### Type Behavior
 
 | Type                                | When Env Var Missing | When Env Var Set            |
 | ----------------------------------- | -------------------- | --------------------------- |
 | `T` (no attribute)                  | Error                | Parsed with `FromStr`       |
-| `T` + `#[env(default)]`             | `Default::default()` | Parsed with `FromStr`       |
-| `T` + `#[env(default = value)]`     | Uses `value`         | Parsed with `FromStr`       |
+| `T` + `#[conf(default)]`             | `Default::default()` | Parsed with `FromStr`       |
+| `T` + `#[conf(default = value)]`     | Uses `value`         | Parsed with `FromStr`       |
 | `Option<T>`                         | `None`               | `Some(parsed_value)`        |
-| `T` + `#[env(deserializer = "fn")]` | Error                | Parsed with custom function |
+| `T` + `#[conf(deserializer = "fn")]` | Error                | Parsed with custom function |
 
 ## Combining Attributes
 
 Multiple attributes can be combined:
 
 ```rust
-#[derive(EnvConf)]
-#[env(prefix = "APP_")]
+#[derive(ServiceConf)]
+#[conf(prefix = "APP_")]
 struct Config {
     // Combines: prefix + custom name + from_file + Option
-    #[env(name = "DB_URL")]
-    #[env(from_file)]
+    #[conf(name = "DB_URL")]
+    #[conf(from_file)]
     pub database_url: Option<String>,  // Reads from APP_DB_URL or APP_DB_URL_FILE
 
     // Combines: prefix + default
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub port: u16,  // Reads from APP_PORT, defaults to 8080
 }
 ```
 
 **Invalid combinations** (compile errors):
 
-- `Option<T>` + `#[env(default)]` → Option already defaults to None
-- `#[env(deserializer = "...")]` + `#[env(default)]` → Not supported
+- `Option<T>` + `#[conf(default)]` → Option already defaults to None
+- `#[conf(deserializer = "...")]` + `#[conf(default)]` → Not supported
 
 ## Examples
 
@@ -232,10 +270,10 @@ See the [`examples/`](examples/) directory for complete working examples:
 | --------------------------------------------------------------- | ------------------------------------------------- |
 | [`basic.rs`](examples/basic.rs)                                 | Required fields, explicit default values          |
 | [`optional_fields.rs`](examples/optional_fields.rs)             | `Option<T>` for optional fields                   |
-| [`default_trait.rs`](examples/default_trait.rs)                 | `#[env(default)]` using `Default` trait           |
-| [`prefix.rs`](examples/prefix.rs)                               | `#[env(prefix = "...")]` at struct level          |
-| [`file_based_secrets.rs`](examples/file_based_secrets.rs)       | `#[env(from_file)]` for Kubernetes/Docker secrets |
-| [`custom_names.rs`](examples/custom_names.rs)                   | `#[env(name = "...")]` for custom env var names   |
+| [`default_trait.rs`](examples/default_trait.rs)                 | `#[conf(default)]` using `Default` trait           |
+| [`prefix.rs`](examples/prefix.rs)                               | `#[conf(prefix = "...")]` at struct level          |
+| [`file_based_secrets.rs`](examples/file_based_secrets.rs)       | `#[conf(from_file)]` for Kubernetes/Docker secrets |
+| [`custom_names.rs`](examples/custom_names.rs)                   | `#[conf(name = "...")]` for custom env var names   |
 | [`complex_types.rs`](examples/complex_types.rs)                 | `Vec`, `HashMap` with JSON deserializer           |
 | [`custom_deserialize_fn.rs`](examples/custom_deserialize_fn.rs) | Custom deserializer functions                     |
 | [`comprehensive.rs`](examples/comprehensive.rs)                 | Multiple features combined                        |
