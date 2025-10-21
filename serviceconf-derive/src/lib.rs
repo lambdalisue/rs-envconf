@@ -1,7 +1,4 @@
-//! Derive macro implementation for serviceconf.
-//!
-//! This crate provides the `#[derive(ServiceConf)]` procedural macro which automatically
-//! generates environment variable loading code for configuration structs.
+#![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -30,23 +27,137 @@ fn extract_option_inner_type(ty: &Type) -> &Type {
 
 /// `ServiceConf` derive macro
 ///
-/// Automatically implements the `from_env()` method on structs.
+/// Automatically implements the `from_env()` method on structs for loading configuration
+/// from environment variables.
 ///
 /// # Supported Attributes
 ///
-/// **Struct-level**:
-/// - `#[conf(prefix = "PREFIX_")]`: Add prefix to all env var names
+/// ## Struct-level Attributes
 ///
-/// **Field-level**:
-/// - `#[conf(name = "CUSTOM_NAME")]`: Custom environment variable name
-/// - `#[conf(default)]`: Use `Default::default()` if env var not set
-/// - `#[conf(default = value)]`: Use explicit default value if env var not set
-/// - `#[conf(from_file)]`: Support `{VAR}_FILE` pattern
-/// - `#[conf(deserializer = "func")]`: Use custom deserializer function
+/// ### `#[conf(prefix = "PREFIX_")]`
+/// Add a prefix to all environment variable names in the struct.
 ///
-/// # Example
+/// ```no_run
+/// use serviceconf::ServiceConf;
 ///
-/// See the `serviceconf` crate documentation for usage examples.
+/// #[derive(ServiceConf)]
+/// #[conf(prefix = "MYAPP_")]
+/// struct Config {
+///     pub api_key: String,  // Reads from MYAPP_API_KEY
+///     pub port: u16,        // Reads from MYAPP_PORT
+/// }
+/// ```
+///
+/// ## Field-level Attributes
+///
+/// ### `#[conf(name = "CUSTOM_NAME")]`
+/// Override the default environment variable name for a specific field.
+///
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     #[conf(name = "DATABASE_URL")]
+///     pub db_connection: String,  // Reads from DATABASE_URL
+/// }
+/// ```
+///
+/// ### `#[conf(default)]`
+/// Use `Default::default()` when the environment variable is not set.
+///
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     #[conf(default)]
+///     pub port: u16,  // Uses 0 if PORT not set
+/// }
+/// ```
+///
+/// ### `#[conf(default = value)]`
+/// Use an explicit default value when the environment variable is not set.
+///
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     #[conf(default = 8080)]
+///     pub port: u16,  // Uses 8080 if PORT not set
+/// }
+/// ```
+///
+/// ### `#[conf(from_file)]`
+/// Support loading from file-based secrets (Kubernetes/Docker Secrets).
+/// Reads from both `VAR_NAME` and `VAR_NAME_FILE` environment variables.
+///
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     #[conf(from_file)]
+///     pub api_key: String,  // Reads from API_KEY or API_KEY_FILE
+/// }
+/// ```
+///
+/// ### `#[conf(deserializer = "function")]`
+/// Use a custom deserializer function for complex types.
+///
+/// The function signature must be: `fn(&str) -> Result<T, impl std::fmt::Display>`
+///
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// fn parse_list(s: &str) -> Result<Vec<String>, String> {
+///     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
+/// }
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     #[conf(deserializer = "parse_list")]
+///     pub items: Vec<String>,
+/// }
+/// ```
+///
+/// # Examples
+///
+/// **Basic usage:**
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     pub api_key: String,
+///
+///     #[conf(default = 8080)]
+///     pub port: u16,
+/// }
+///
+/// fn main() -> anyhow::Result<()> {
+///     let config = Config::from_env()?;
+///     Ok(())
+/// }
+/// ```
+///
+/// **With prefix and file-based secrets:**
+/// ```no_run
+/// use serviceconf::ServiceConf;
+///
+/// #[derive(ServiceConf)]
+/// #[conf(prefix = "APP_")]
+/// struct Config {
+///     #[conf(from_file)]
+///     pub database_password: String,  // Reads from APP_DATABASE_PASSWORD or APP_DATABASE_PASSWORD_FILE
+///
+///     #[conf(default = 3000)]
+///     pub port: u16,  // Reads from APP_PORT, defaults to 3000
+/// }
+/// ```
+///
+/// For complete documentation and more examples, see the [`serviceconf`](https://docs.rs/serviceconf) crate.
 #[proc_macro_derive(ServiceConf, attributes(conf))]
 pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

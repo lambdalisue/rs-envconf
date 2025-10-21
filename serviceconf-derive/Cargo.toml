@@ -9,7 +9,7 @@ repository.workspace = true
 description = "Derive macro for serviceconf"
 keywords = ["microservices", "config", "derive", "macro"]
 categories = ["config", "development-tools"]
-readme = "../README.md"
+readme = "README.md"
 
 [lib]
 proc-macro = true
@@ -18,3 +18,7 @@ proc-macro = true
 proc-macro2.workspace = true
 quote.workspace = true
 syn.workspace = true
+
+[dev-dependencies]
+serviceconf = { path = "../serviceconf" }
+anyhow.workspace = true

@@ -9,7 +9,7 @@ repository.workspace = true
 description = "Configuration library for microservices: load settings from environment variables with file-based secrets support"
 keywords = ["microservices", "config", "environment", "kubernetes", "docker"]
 categories = ["config", "development-tools"]
-readme = "../README.md"
+readme = "README.md"
 
 [dependencies]
 anyhow.workspace = true
