@@ -259,8 +259,7 @@ struct Config {
 
 **Invalid combinations** (compile errors):
 
-- `Option<T>` + `#[conf(default)]` → Option already defaults to None
-- `#[conf(deserializer = "...")]` + `#[conf(default)]` → Not supported
+- `Option<T>` + `#[conf(default)]` or `#[conf(default = value)]` → Option already defaults to None
 
 ## Examples
 
