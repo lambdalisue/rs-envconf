@@ -1,39 +1,39 @@
 //! Integration tests
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 use serial_test::serial;
 use std::env;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct BasicConfig {
     pub database_url: String,
     pub api_key: String,
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithDefaults {
-    #[env(default = "127.0.0.1:8080".to_string())]
+    #[conf(default = "127.0.0.1:8080".to_string())]
     pub server_addr: String,
 
-    #[env(default = 10)]
+    #[conf(default = 10)]
     pub max_connections: u32,
 
-    #[env(default = false)]
+    #[conf(default = false)]
     pub debug_mode: bool,
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithCustomNames {
-    #[env(name = "DB_CONNECTION_STRING")]
+    #[conf(name = "DB_CONNECTION_STRING")]
     pub database_url: String,
 
-    #[env(name = "REDIS_URL")]
+    #[conf(name = "REDIS_URL")]
     pub cache_url: String,
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithFileSupport {
-    #[env(from_file)]
+    #[conf(from_file)]
     pub secret_key: String,
 
     pub normal_var: String,
@@ -160,13 +160,13 @@ fn test_parse_error() {
     env::remove_var("MAX_CONNECTIONS");
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithJsonFields {
     // Simple field using FromStr
     pub simple_value: String,
 
     // Complex field using JSON deserialization
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub tags: Vec<String>,
 }
 
@@ -188,11 +188,11 @@ fn comma_separated_deserializer(s: &str) -> Result<Vec<String>, String> {
     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithCustomDeserializer {
     pub simple: String,
 
-    #[env(deserializer = "comma_separated_deserializer")]
+    #[conf(deserializer = "comma_separated_deserializer")]
     pub comma_list: Vec<String>,
 }
 
@@ -210,16 +210,16 @@ fn test_custom_deserializer_function() {
     env::remove_var("COMMA_LIST");
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithDefaultTrait {
     // Uses Default::default() when env var is missing
-    #[env(default)]
+    #[conf(default)]
     pub optional_string: String,
 
-    #[env(default)]
+    #[conf(default)]
     pub optional_number: u32,
 
-    #[env(default)]
+    #[conf(default)]
     pub optional_bool: bool,
 }
 
@@ -236,15 +236,15 @@ fn test_default_trait() {
     assert!(!config.optional_bool); // bool::default()
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithDefaultAndFile {
     // Combination of default and from_file
-    #[env(from_file)]
-    #[env(default = "default_secret".to_string())]
+    #[conf(from_file)]
+    #[conf(default = "default_secret".to_string())]
     pub secret_with_default: String,
 
-    #[env(from_file)]
-    #[env(default)]
+    #[conf(from_file)]
+    #[conf(default)]
     pub optional_secret: String,
 }
 
@@ -295,13 +295,13 @@ fn test_env_var_overrides_file() {
     env::remove_var("SECRET_WITH_DEFAULT_FILE");
 }
 
-#[derive(Debug, EnvConf)]
-#[env(prefix = "APP_")]
+#[derive(Debug, ServiceConf)]
+#[conf(prefix = "APP_")]
 struct ConfigWithPrefix {
     pub database_url: String,
     pub api_key: String,
 
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub port: u16,
 }
 
@@ -322,7 +322,7 @@ fn test_prefix() {
     env::remove_var("APP_API_KEY");
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithOption {
     pub required: String,
     pub optional: Option<String>,
@@ -361,9 +361,9 @@ fn test_option_type_none() {
     env::remove_var("REQUIRED");
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithOptionAndFile {
-    #[env(from_file)]
+    #[conf(from_file)]
     pub optional_secret: Option<String>,
 }
 
@@ -395,9 +395,9 @@ fn json_deserializer(s: &str) -> Result<Vec<String>, serde_json::Error> {
     serde_json::from_str(s)
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct ConfigWithOptionAndDeserializer {
-    #[env(deserializer = "json_deserializer")]
+    #[conf(deserializer = "json_deserializer")]
     pub optional_tags: Option<Vec<String>>,
 }
 
@@ -420,10 +420,10 @@ fn test_option_with_deserializer() {
     assert_eq!(config.optional_tags, None);
 }
 
-#[derive(Debug, EnvConf)]
-#[env(prefix = "TEST_")]
+#[derive(Debug, ServiceConf)]
+#[conf(prefix = "TEST_")]
 struct ConfigWithPrefixAndCustomName {
-    #[env(name = "DB")]
+    #[conf(name = "DB")]
     pub database_url: String, // Reads from TEST_DB (not TEST_DATABASE_URL)
 }
 
@@ -444,10 +444,10 @@ fn test_file_read_error() {
     env::set_var("SECRET_FILE", "/nonexistent/path/to/file");
     env::remove_var("SECRET");
 
-    #[derive(EnvConf)]
+    #[derive(ServiceConf)]
     #[allow(dead_code)]
     struct TempConfig {
-        #[env(from_file)]
+        #[conf(from_file)]
         secret: String,
     }
 

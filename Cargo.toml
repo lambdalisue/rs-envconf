@@ -1,5 +1,5 @@
 [workspace]
-members = ["envconf", "envconf-derive"]
+members = ["serviceconf", "serviceconf-derive"]
 resolver = "2"
 
 [workspace.package]
@@ -8,7 +8,7 @@ edition = "2021"
 rust-version = "1.84"
 authors = ["Alisue <lambdalisue@gmail.com>"]
 license = "MIT"
-repository = "https://github.com/lambdalisue/rs-envconf"
+repository = "https://github.com/lambdalisue/rs-serviceconf"
 
 [workspace.dependencies]
 # Core dependencies

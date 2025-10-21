@@ -1,6 +1,6 @@
 //! Example demonstrating complex types with explicit JSON deserialization
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ impl DatabaseConfig {
     }
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Simple string using FromStr (no JSON required)
     pub app_name: String,
@@ -26,15 +26,15 @@ struct Config {
     pub max_connections: u32,
 
     // Complex type using explicit JSON deserialization
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub tags: Vec<String>,
 
     // HashMap using explicit JSON deserialization
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub environment_vars: HashMap<String, String>,
 
     // Nested struct using explicit JSON deserialization
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub database: DatabaseConfig,
 }
 

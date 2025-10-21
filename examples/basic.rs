@@ -1,22 +1,22 @@
 //! Basic usage example
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Required field: loaded from DATABASE_URL environment variable
     pub database_url: String,
 
     // With default value
-    #[env(default = "127.0.0.1:8080".to_string())]
+    #[conf(default = "127.0.0.1:8080".to_string())]
     pub server_addr: String,
 
     // Numeric type
-    #[env(default = 10)]
+    #[conf(default = 10)]
     pub max_connections: u32,
 
     // Boolean type
-    #[env(default = false)]
+    #[conf(default = false)]
     pub debug_mode: bool,
 }
 

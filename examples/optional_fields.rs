@@ -1,8 +1,8 @@
 //! Example demonstrating Option<T> for optional fields
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Required field
     pub app_name: String,
@@ -13,7 +13,7 @@ struct Config {
     pub debug: Option<bool>,
 
     // Optional with from_file
-    #[env(from_file)]
+    #[conf(from_file)]
     pub database_password: Option<String>,
 }
 

@@ -21,11 +21,11 @@ impl FieldAttrs {
         let mut attrs = Self::default();
 
         for attr in &field.attrs {
-            if !attr.path().is_ident("env") {
+            if !attr.path().is_ident("conf") {
                 continue;
             }
 
-            // Parse #[env(...)] contents
+            // Parse #[conf(...)] contents
             let _ = attr.parse_nested_meta(|meta| {
                 // name = "..."
                 if meta.path.is_ident("name") {
@@ -67,7 +67,7 @@ impl FieldAttrs {
                     return Ok(());
                 }
 
-                Err(meta.error("unsupported env attribute"))
+                Err(meta.error("unsupported conf attribute"))
             });
         }
 
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn test_parse_name_attribute() {
         let field: Field = parse_quote! {
-            #[env(name = "CUSTOM_NAME")]
+            #[conf(name = "CUSTOM_NAME")]
             pub field_name: String
         };
 
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_parse_default_string() {
         let field: Field = parse_quote! {
-            #[env(default = "default_value")]
+            #[conf(default = "default_value")]
             pub field_name: String
         };
 
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_parse_default_number() {
         let field: Field = parse_quote! {
-            #[env(default = 42)]
+            #[conf(default = 42)]
             pub field_name: i32
         };
 
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn test_parse_from_file() {
         let field: Field = parse_quote! {
-            #[env(from_file)]
+            #[conf(from_file)]
             pub field_name: String
         };
 
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn test_parse_multiple_attributes() {
         let field: Field = parse_quote! {
-            #[env(name = "DB_URL", from_file)]
+            #[conf(name = "DB_URL", from_file)]
             pub database_url: String
         };
 
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn test_parse_default_no_value() {
         let field: Field = parse_quote! {
-            #[env(default)]
+            #[conf(default)]
             pub field_name: String
         };
 
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_parse_deserializer() {
         let field: Field = parse_quote! {
-            #[env(deserializer = "serde_json::from_str")]
+            #[conf(deserializer = "serde_json::from_str")]
             pub field_name: Vec<String>
         };
 

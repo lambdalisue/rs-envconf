@@ -1,18 +1,18 @@
 //! Example demonstrating prefix attribute
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
-#[env(prefix = "MYAPP_")]
+#[derive(Debug, ServiceConf)]
+#[conf(prefix = "MYAPP_")]
 struct Config {
     // Environment variables will be prefixed: MYAPP_DATABASE_URL, MYAPP_API_KEY, etc.
     pub database_url: String,
     pub api_key: String,
 
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub port: u16,
 
-    #[env(default)]
+    #[conf(default)]
     pub debug: bool,
 }
 

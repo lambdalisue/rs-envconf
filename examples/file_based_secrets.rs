@@ -1,17 +1,17 @@
 //! File-based configuration example
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // File-based configuration: load from API_KEY or API_KEY_FILE
-    #[env(from_file)]
+    #[conf(from_file)]
     pub api_key: String,
 
     // Database password can also be loaded from a file
-    #[env(from_file)]
+    #[conf(from_file)]
     pub database_password: String,
 
     // Regular environment variable
