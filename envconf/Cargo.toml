@@ -20,3 +20,39 @@ serde_json.workspace = true
 [dev-dependencies]
 serial_test.workspace = true
 tempfile.workspace = true
+
+[[example]]
+name = "basic"
+path = "../examples/basic.rs"
+
+[[example]]
+name = "complex_types"
+path = "../examples/complex_types.rs"
+
+[[example]]
+name = "comprehensive"
+path = "../examples/comprehensive.rs"
+
+[[example]]
+name = "custom_deserialize_fn"
+path = "../examples/custom_deserialize_fn.rs"
+
+[[example]]
+name = "custom_names"
+path = "../examples/custom_names.rs"
+
+[[example]]
+name = "default_trait"
+path = "../examples/default_trait.rs"
+
+[[example]]
+name = "file_based_secrets"
+path = "../examples/file_based_secrets.rs"
+
+[[example]]
+name = "optional_fields"
+path = "../examples/optional_fields.rs"
+
+[[example]]
+name = "prefix"
+path = "../examples/prefix.rs"
