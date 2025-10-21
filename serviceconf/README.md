@@ -33,10 +33,8 @@ struct Config {
     pub port: u16,
 }
 
-fn main() {
-    let config = Config::from_env().unwrap();
-    println!("Port: {}", config.port);
-}
+let config = Config::from_env().unwrap();
+println!("Port: {}", config.port);
 ```
 
 **Local development** (direct environment variable):
