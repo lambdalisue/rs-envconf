@@ -344,11 +344,9 @@ struct Config {
     pub api_key: String,
 }
 
-fn main() {
-    match Config::from_env() {
-        Ok(config) => println!("Config loaded successfully"),
-        Err(e) => eprintln!("Failed to load config: {}", e),
-    }
+match Config::from_env() {
+    Ok(config) => println!("Config loaded successfully"),
+    Err(e) => eprintln!("Failed to load config: {}", e),
 }
 ```
 
