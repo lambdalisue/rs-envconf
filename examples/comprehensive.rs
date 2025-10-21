@@ -1,10 +1,10 @@
 //! Comprehensive example showing multiple features combined
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 use std::collections::HashMap;
 
-#[derive(Debug, EnvConf)]
-#[env(prefix = "APP_")]
+#[derive(Debug, ServiceConf)]
+#[conf(prefix = "APP_")]
 struct Config {
     // Required field
     pub name: String, // APP_NAME
@@ -13,31 +13,31 @@ struct Config {
     pub version: Option<String>, // APP_VERSION
 
     // Default value
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub port: u16, // APP_PORT
 
     // Default trait
-    #[env(default)]
+    #[conf(default)]
     pub debug: bool, // APP_DEBUG
 
     // Custom name
-    #[env(name = "DATABASE_CONNECTION_STRING")]
+    #[conf(name = "DATABASE_CONNECTION_STRING")]
     pub database_url: String, // APP_DATABASE_CONNECTION_STRING
 
     // File-based secret
-    #[env(from_file)]
+    #[conf(from_file)]
     pub api_key: String, // APP_API_KEY or APP_API_KEY_FILE
 
     // Optional file-based secret
-    #[env(from_file)]
+    #[conf(from_file)]
     pub oauth_token: Option<String>, // APP_OAUTH_TOKEN or APP_OAUTH_TOKEN_FILE
 
     // Custom deserializer
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub tags: Vec<String>, // APP_TAGS (JSON)
 
     // Optional with custom deserializer
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub metadata: Option<HashMap<String, String>>, // APP_METADATA (JSON)
 }
 

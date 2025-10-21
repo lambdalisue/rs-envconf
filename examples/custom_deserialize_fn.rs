@@ -1,27 +1,27 @@
 //! Example demonstrating custom deserializer functions
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
 // Custom deserializer for comma-separated strings
 fn comma_separated(s: &str) -> Result<Vec<String>, String> {
     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
 }
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Default: uses FromStr
     pub app_name: String,
     pub port: u16,
 
     // Uses serde_json::from_str (JSON format)
-    #[env(deserializer = "serde_json::from_str")]
+    #[conf(deserializer = "serde_json::from_str")]
     pub json_tags: Vec<String>,
 
     // Uses custom function (comma-separated)
-    #[env(deserializer = "comma_separated")]
+    #[conf(deserializer = "comma_separated")]
     pub comma_tags: Vec<String>,
     // You can also use any other deserializer like toml::from_str
-    // #[env(deserializer = "toml::from_str")]
+    // #[conf(deserializer = "toml::from_str")]
     // pub toml_config: MyTomlConfig,
 }
 

@@ -1,27 +1,27 @@
-//! Example demonstrating #[env(default)] using Default trait
+//! Example demonstrating #[conf(default)] using Default trait
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Uses Default::default() if not set
-    #[env(default)]
+    #[conf(default)]
     pub host: String, // "" (empty string)
 
-    #[env(default)]
+    #[conf(default)]
     pub port: u16, // 0
 
-    #[env(default)]
+    #[conf(default)]
     pub enabled: bool, // false
 
     // Explicit default values for comparison
-    #[env(default = "localhost".to_string())]
+    #[conf(default = "localhost".to_string())]
     pub server: String,
 
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub api_port: u16,
 
-    #[env(default = true)]
+    #[conf(default = true)]
     pub verbose: bool,
 }
 

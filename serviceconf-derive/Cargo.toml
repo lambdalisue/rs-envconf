@@ -1,13 +1,13 @@
 [package]
-name = "envconf-derive"
+name = "serviceconf-derive"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Derive macro for envconf"
-keywords = ["env", "config", "derive", "macro"]
+description = "Derive macro for serviceconf"
+keywords = ["microservices", "config", "derive", "macro"]
 categories = ["config", "development-tools"]
 
 [lib]

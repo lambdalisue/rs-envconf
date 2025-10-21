@@ -1,19 +1,19 @@
 //! Custom environment variable names example
 
-use envconf::EnvConf;
+use serviceconf::ServiceConf;
 
-#[derive(Debug, EnvConf)]
+#[derive(Debug, ServiceConf)]
 struct Config {
     // Load from POSTGRES_CONNECTION_STRING environment variable
-    #[env(name = "POSTGRES_CONNECTION_STRING")]
+    #[conf(name = "POSTGRES_CONNECTION_STRING")]
     pub database_url: String,
 
     // Load from REDIS_ENDPOINT environment variable
-    #[env(name = "REDIS_ENDPOINT")]
+    #[conf(name = "REDIS_ENDPOINT")]
     pub cache_url: String,
 
     // Load from SERVER_PORT environment variable (with default value)
-    #[env(default = 8080)]
+    #[conf(default = 8080)]
     pub server_port: u16,
 }
 

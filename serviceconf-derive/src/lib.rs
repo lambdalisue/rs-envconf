@@ -1,4 +1,4 @@
-//! Derive macro implementation for envconf
+//! Derive macro implementation for serviceconf
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -22,27 +22,27 @@ fn extract_option_inner_type(ty: &Type) -> &Type {
     ty
 }
 
-/// `EnvConf` derive macro
+/// `ServiceConf` derive macro
 ///
 /// Automatically implements the `from_env()` method on structs.
 ///
 /// # Supported Attributes
 ///
 /// **Struct-level**:
-/// - `#[env(prefix = "PREFIX_")]`: Add prefix to all env var names
+/// - `#[conf(prefix = "PREFIX_")]`: Add prefix to all env var names
 ///
 /// **Field-level**:
-/// - `#[env(name = "CUSTOM_NAME")]`: Custom environment variable name
-/// - `#[env(default)]`: Use `Default::default()` if env var not set
-/// - `#[env(default = value)]`: Use explicit default value if env var not set
-/// - `#[env(from_file)]`: Support `{VAR}_FILE` pattern
-/// - `#[env(deserializer = "func")]`: Use custom deserializer function
+/// - `#[conf(name = "CUSTOM_NAME")]`: Custom environment variable name
+/// - `#[conf(default)]`: Use `Default::default()` if env var not set
+/// - `#[conf(default = value)]`: Use explicit default value if env var not set
+/// - `#[conf(from_file)]`: Support `{VAR}_FILE` pattern
+/// - `#[conf(deserializer = "func")]`: Use custom deserializer function
 ///
 /// # Example
 ///
-/// See the `envconf` crate documentation for usage examples.
-#[proc_macro_derive(EnvConf, attributes(env))]
-pub fn derive_envconf(input: TokenStream) -> TokenStream {
+/// See the `serviceconf` crate documentation for usage examples.
+#[proc_macro_derive(ServiceConf, attributes(conf))]
+pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     // Struct name
@@ -52,7 +52,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
     let mut prefix = String::new();
 
     for attr in &input.attrs {
-        if !attr.path().is_ident("env") {
+        if !attr.path().is_ident("conf") {
             continue;
         }
 
@@ -66,7 +66,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 return Ok(());
             }
 
-            Err(meta.error("unsupported struct-level env attribute"))
+            Err(meta.error("unsupported struct-level conf attribute"))
         });
     }
 
@@ -77,14 +77,14 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
             _ => {
                 return syn::Error::new_spanned(
                     &input,
-                    "EnvConf only supports structs with named fields",
+                    "ServiceConf only supports structs with named fields",
                 )
                 .to_compile_error()
                 .into();
             }
         },
         _ => {
-            return syn::Error::new_spanned(&input, "EnvConf only supports structs")
+            return syn::Error::new_spanned(&input, "ServiceConf only supports structs")
                 .to_compile_error()
                 .into();
         }
@@ -134,7 +134,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
             let inner_type = extract_option_inner_type(field_type);
 
             quote! {
-                ::envconf::de::deserialize_optional::<#inner_type>(
+                ::serviceconf::de::deserialize_optional::<#inner_type>(
                     #env_var_name,
                     #load_from_file
                 )?
@@ -155,9 +155,9 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 let inner_type = extract_option_inner_type(field_type);
 
                 quote! {
-                    match ::envconf::de::get_env_value(#env_var_name, #load_from_file) {
-                        Ok(__value) => Some(#func(&__value).map_err(|e| ::envconf::EnvError::parse_error::<#inner_type>(#env_var_name, e))?),
-                        Err(::envconf::EnvError::Missing { .. }) => None,
+                    match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                        Ok(__value) => Some(#func(&__value).map_err(|e| ::serviceconf::EnvError::parse_error::<#inner_type>(#env_var_name, e))?),
+                        Err(::serviceconf::EnvError::Missing { .. }) => None,
                         Err(e) => return Err(e.into()),
                     }
                 }
@@ -165,8 +165,8 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 // Non-Option with deserializer
                 quote! {
                     {
-                        let __value = ::envconf::de::get_env_value(#env_var_name, #load_from_file)?;
-                        #func(&__value).map_err(|e| ::envconf::EnvError::parse_error::<#field_type>(#env_var_name, e))?
+                        let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file)?;
+                        #func(&__value).map_err(|e| ::serviceconf::EnvError::parse_error::<#field_type>(#env_var_name, e))?
                     }
                 }
             }
@@ -176,7 +176,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 Some(Some(default_value)) => {
                     // Explicit default value
                     quote! {
-                        ::envconf::de::deserialize_with_default::<#field_type>(
+                        ::serviceconf::de::deserialize_with_default::<#field_type>(
                             #env_var_name,
                             #load_from_file,
                             #default_value
@@ -186,7 +186,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 Some(None) => {
                     // Use Default::default()
                     quote! {
-                        ::envconf::de::deserialize_with_default::<#field_type>(
+                        ::serviceconf::de::deserialize_with_default::<#field_type>(
                             #env_var_name,
                             #load_from_file,
                             Default::default()
@@ -196,7 +196,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
                 None => {
                     // Required field
                     quote! {
-                        ::envconf::de::deserialize_required::<#field_type>(
+                        ::serviceconf::de::deserialize_required::<#field_type>(
                             #env_var_name,
                             #load_from_file
                         )?
@@ -220,7 +220,7 @@ pub fn derive_envconf(input: TokenStream) -> TokenStream {
             /// - Required environment variables are not set
             /// - Environment variable values cannot be parsed into target types
             /// - File-based configuration fails to read files
-            pub fn from_env() -> ::envconf::anyhow::Result<Self> {
+            pub fn from_env() -> ::serviceconf::anyhow::Result<Self> {
                 Ok(Self {
                     #(#field_initializers),*
                 })

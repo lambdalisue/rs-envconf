@@ -1,18 +1,18 @@
 [package]
-name = "envconf"
+name = "serviceconf"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Declarative environment variable configuration library with file-based secret support"
-keywords = ["env", "config", "kubernetes", "configuration", "derive"]
+description = "Configuration library for microservices: load settings from environment variables with file-based secrets support"
+keywords = ["microservices", "config", "environment", "kubernetes", "docker"]
 categories = ["config", "development-tools"]
 
 [dependencies]
 anyhow.workspace = true
-envconf-derive = { version = "0.1.0", path = "../envconf-derive" }
+serviceconf-derive = { version = "0.1.0", path = "../serviceconf-derive" }
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
