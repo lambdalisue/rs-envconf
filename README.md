@@ -104,9 +104,10 @@ struct Config {
     pub port: u16,
 }
 
-let config = Config::from_env()?;
-println!("Port: {}", config.port);
-# Ok::<(), Box<dyn std::error::Error>>(())
+fn main() {
+    let config = Config::from_env().unwrap();
+    println!("Port: {}", config.port);
+}
 ```
 
 **Local development** (direct environment variable):

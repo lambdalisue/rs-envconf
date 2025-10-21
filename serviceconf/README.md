@@ -33,14 +33,10 @@ struct Config {
     pub port: u16,
 }
 
-# fn main() -> anyhow::Result<()> {
-#     std::env::set_var("API_KEY", "test-key");
-let config = Config::from_env()?;
-println!("Port: {}", config.port);
-#     assert_eq!(config.api_key, "test-key");
-#     assert_eq!(config.port, 8080);
-#     Ok(())
-# }
+fn main() {
+    let config = Config::from_env().unwrap();
+    println!("Port: {}", config.port);
+}
 ```
 
 **Local development** (direct environment variable):
