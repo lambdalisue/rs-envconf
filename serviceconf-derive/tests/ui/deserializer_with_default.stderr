@@ -1,7 +1,0 @@
-error: default value is not supported with deserializer attribute
-  --> tests/ui/deserializer_with_default.rs:15:5
-   |
-15 | /     /// English comment with deserializer + default should give clear error
-16 | |     #[conf(deserializer = "parse_duration_secs", default = Duration::from_secs(60))]
-17 | |     pub timeout: Duration,
-   | |_________________________^

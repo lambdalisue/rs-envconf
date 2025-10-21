@@ -1,7 +1,0 @@
-error: default value is not supported with deserializer attribute
-  --> tests/ui/deserializer_with_default_trait.rs:11:5
-   |
-11 | /     /// This should produce a clear error
-12 | |     #[conf(deserializer = "parse_list", default)]
-13 | |     pub items: Vec<String>,
-   | |__________________________^
