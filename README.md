@@ -87,7 +87,9 @@ export DATABASE_PASSWORD=dev-password
 
 ```toml
 [dependencies]
-serviceconf = { git = "https://github.com/lambdalisue/rs-serviceconf" }
+serviceconf = "0.2"
+# Or from GitHub
+#serviceconf = { git = "https://github.com/lambdalisue/rs-serviceconf" }
 ```
 
 ## Quick Start
