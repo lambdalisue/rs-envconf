@@ -1,6 +1,8 @@
 # serviceconf
 
 [![Build](https://github.com/lambdalisue/rs-serviceconf/actions/workflows/build.yml/badge.svg)](https://github.com/lambdalisue/rs-serviceconf/actions/workflows/build.yml)
+[![Crates.io Version](https://img.shields.io/crates/v/serviceconf)](https://crates.io/crates/serviceconf)
+[![docs.rs](https://img.shields.io/docsrs/serviceconf)](https://docs.rs/serviceconf/0.1.0/serviceconf/)
 
 **Environment variable configuration with file-based secrets support**
 
