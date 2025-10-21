@@ -2,7 +2,7 @@
 
 /// Environment variable loading error
 #[derive(Debug, thiserror::Error)]
-pub enum EnvError {
+pub enum ServiceConfError {
     /// Environment variable not found
     #[error("Environment variable '{name}' is required but not set")]
     Missing { name: String },
@@ -24,7 +24,7 @@ pub enum EnvError {
     },
 }
 
-impl EnvError {
+impl ServiceConfError {
     /// Create a parse error (used by macro-generated code)
     #[doc(hidden)]
     pub fn parse_error<T>(name: impl Into<String>, message: impl std::fmt::Display) -> Self {

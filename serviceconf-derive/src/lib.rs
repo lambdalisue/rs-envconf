@@ -156,8 +156,8 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
 
                 quote! {
                     match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
-                        Ok(__value) => Some(#func(&__value).map_err(|e| ::serviceconf::EnvError::parse_error::<#inner_type>(#env_var_name, e))?),
-                        Err(::serviceconf::EnvError::Missing { .. }) => None,
+                        Ok(__value) => Some(#func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#inner_type>(#env_var_name, e))?),
+                        Err(::serviceconf::ServiceConfError::Missing { .. }) => None,
                         Err(e) => return Err(e.into()),
                     }
                 }
@@ -166,7 +166,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                 quote! {
                     {
                         let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file)?;
-                        #func(&__value).map_err(|e| ::serviceconf::EnvError::parse_error::<#field_type>(#env_var_name, e))?
+                        #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?
                     }
                 }
             }

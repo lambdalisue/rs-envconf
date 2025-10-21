@@ -1,6 +1,6 @@
 //! Deserialization functions for environment variables
 
-use crate::error::EnvError;
+use crate::error::ServiceConfError;
 use std::env;
 use std::fs;
 use std::str::FromStr;
@@ -9,7 +9,7 @@ use std::str::FromStr;
 ///
 /// Used by the derive macro for fields without default values.
 #[doc(hidden)]
-pub fn deserialize_required<T>(env_name: &str, from_file: bool) -> Result<T, EnvError>
+pub fn deserialize_required<T>(env_name: &str, from_file: bool) -> Result<T, ServiceConfError>
 where
     T: FromStr,
     T::Err: std::fmt::Display,
@@ -17,7 +17,7 @@ where
     let value = get_env_value(env_name, from_file)?;
     value
         .parse::<T>()
-        .map_err(|e| EnvError::parse_error::<T>(env_name, e))
+        .map_err(|e| ServiceConfError::parse_error::<T>(env_name, e))
 }
 
 /// Load a value with a default using `FromStr`
@@ -28,7 +28,7 @@ pub fn deserialize_with_default<T>(
     env_name: &str,
     from_file: bool,
     default: T,
-) -> Result<T, EnvError>
+) -> Result<T, ServiceConfError>
 where
     T: FromStr,
     T::Err: std::fmt::Display,
@@ -36,8 +36,8 @@ where
     match get_env_value(env_name, from_file) {
         Ok(value) => value
             .parse::<T>()
-            .map_err(|e| EnvError::parse_error::<T>(env_name, e)),
-        Err(EnvError::Missing { .. }) => Ok(default),
+            .map_err(|e| ServiceConfError::parse_error::<T>(env_name, e)),
+        Err(ServiceConfError::Missing { .. }) => Ok(default),
         Err(e) => Err(e),
     }
 }
@@ -47,7 +47,10 @@ where
 /// Returns `None` if environment variable is not set, `Some(T)` if it is.
 /// Used by the derive macro for `Option<T>` fields.
 #[doc(hidden)]
-pub fn deserialize_optional<T>(env_name: &str, from_file: bool) -> Result<Option<T>, EnvError>
+pub fn deserialize_optional<T>(
+    env_name: &str,
+    from_file: bool,
+) -> Result<Option<T>, ServiceConfError>
 where
     T: FromStr,
     T::Err: std::fmt::Display,
@@ -56,10 +59,10 @@ where
         Ok(value) => {
             let parsed = value
                 .parse::<T>()
-                .map_err(|e| EnvError::parse_error::<T>(env_name, e))?;
+                .map_err(|e| ServiceConfError::parse_error::<T>(env_name, e))?;
             Ok(Some(parsed))
         }
-        Err(EnvError::Missing { .. }) => Ok(None),
+        Err(ServiceConfError::Missing { .. }) => Ok(None),
         Err(e) => Err(e),
     }
 }
@@ -73,7 +76,7 @@ where
 ///
 /// Used by macro-generated code.
 #[doc(hidden)]
-pub fn get_env_value(env_name: &str, from_file: bool) -> Result<String, EnvError> {
+pub fn get_env_value(env_name: &str, from_file: bool) -> Result<String, ServiceConfError> {
     if let Ok(value) = env::var(env_name) {
         return Ok(value);
     }
@@ -83,7 +86,7 @@ pub fn get_env_value(env_name: &str, from_file: bool) -> Result<String, EnvError
         if let Ok(file_path) = env::var(&file_var_name) {
             return fs::read_to_string(&file_path)
                 .map(|s| s.trim().to_string())
-                .map_err(|e| EnvError::FileRead {
+                .map_err(|e| ServiceConfError::FileRead {
                     name: file_var_name,
                     path: file_path,
                     source: e,
@@ -91,7 +94,7 @@ pub fn get_env_value(env_name: &str, from_file: bool) -> Result<String, EnvError
         }
     }
 
-    Err(EnvError::missing(env_name))
+    Err(ServiceConfError::missing(env_name))
 }
 
 #[cfg(test)]
@@ -114,7 +117,7 @@ mod tests {
     fn test_deserialize_required_missing() {
         env::remove_var("MISSING_VAR");
         let result: Result<String, _> = deserialize_required("MISSING_VAR", false);
-        assert!(matches!(result, Err(EnvError::Missing { .. })));
+        assert!(matches!(result, Err(ServiceConfError::Missing { .. })));
     }
 
     #[test]
@@ -229,7 +232,7 @@ mod tests {
         env::set_var("TEST_FILE_MISSING_FILE", "/nonexistent/file/path");
 
         let result = get_env_value("TEST_FILE_MISSING", true);
-        assert!(matches!(result, Err(EnvError::FileRead { .. })));
+        assert!(matches!(result, Err(ServiceConfError::FileRead { .. })));
 
         env::remove_var("TEST_FILE_MISSING_FILE");
     }
@@ -241,7 +244,7 @@ mod tests {
         let result: Result<u32, _> = deserialize_required("TEST_PARSE_ERR", false);
 
         match result {
-            Err(EnvError::Parse { type_name, .. }) => {
+            Err(ServiceConfError::Parse { type_name, .. }) => {
                 assert!(type_name.contains("u32"));
             }
             _ => panic!("Expected Parse error"),

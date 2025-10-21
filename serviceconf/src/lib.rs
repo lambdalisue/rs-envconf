@@ -117,7 +117,7 @@ pub mod de;
 
 mod error;
 
-pub use error::EnvError;
+pub use error::ServiceConfError;
 pub use serviceconf_derive::ServiceConf;
 
 // Re-export for macro-generated code
