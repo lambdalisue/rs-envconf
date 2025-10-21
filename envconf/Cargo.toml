@@ -1,0 +1,22 @@
+[package]
+name = "envconf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Declarative environment variable configuration library with file-based secret support"
+keywords = ["env", "config", "kubernetes", "configuration", "derive"]
+categories = ["config", "development-tools"]
+
+[dependencies]
+anyhow.workspace = true
+envconf-derive = { version = "0.1.0", path = "../envconf-derive" }
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+serial_test.workspace = true
+tempfile.workspace = true

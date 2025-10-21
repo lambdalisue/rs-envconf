@@ -1,0 +1,19 @@
+[package]
+name = "envconf-derive"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Derive macro for envconf"
+keywords = ["env", "config", "derive", "macro"]
+categories = ["config", "development-tools"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
