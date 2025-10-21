@@ -1,5 +1,7 @@
 # envconf
 
+[![Build](https://github.com/lambdalisue/rs-envconf/actions/workflows/build.yml/badge.svg)](https://github.com/lambdalisue/rs-envconf/actions/workflows/build.yml)
+
 A declarative Rust library for loading configuration from environment variables with file-based secret support.
 
 ## Installation
@@ -93,10 +95,12 @@ struct Config {
 ```
 
 Priority:
+
 1. Direct env var (`API_KEY`)
 2. File path from env var (`API_KEY_FILE`)
 
 Kubernetes example:
+
 ```yaml
 env:
   - name: API_KEY_FILE
@@ -172,29 +176,29 @@ export FEATURES=feature1,feature2,feature3
 
 ### Struct-level Attributes
 
-| Attribute | Description |
-|-----------|-------------|
+| Attribute                    | Description                                  |
+| ---------------------------- | -------------------------------------------- |
 | `#[env(prefix = "PREFIX_")]` | Add prefix to all environment variable names |
 
 ### Field-level Attributes
 
-| Attribute | Description | When to Use |
-|-----------|-------------|-------------|
-| `#[env(name = "VAR")]` | Override environment variable name | When field name differs from desired env var |
-| `#[env(default)]` | Use `Default::default()` if not set | For optional fields with sensible defaults |
-| `#[env(default = value)]` | Use explicit default value | When you need a specific default |
-| `#[env(from_file)]` | Support `{VAR}_FILE` pattern | For secrets stored in files |
-| `#[env(deserializer = "fn")]` | Use custom parser | For complex types (Vec, HashMap, etc.) |
+| Attribute                     | Description                         | When to Use                                  |
+| ----------------------------- | ----------------------------------- | -------------------------------------------- |
+| `#[env(name = "VAR")]`        | Override environment variable name  | When field name differs from desired env var |
+| `#[env(default)]`             | Use `Default::default()` if not set | For optional fields with sensible defaults   |
+| `#[env(default = value)]`     | Use explicit default value          | When you need a specific default             |
+| `#[env(from_file)]`           | Support `{VAR}_FILE` pattern        | For secrets stored in files                  |
+| `#[env(deserializer = "fn")]` | Use custom parser                   | For complex types (Vec, HashMap, etc.)       |
 
 ### Type Behavior
 
-| Type | When Env Var Missing | When Env Var Set |
-|------|---------------------|------------------|
-| `T` (no attribute) | Error | Parsed with `FromStr` |
-| `T` + `#[env(default)]` | `Default::default()` | Parsed with `FromStr` |
-| `T` + `#[env(default = value)]` | Uses `value` | Parsed with `FromStr` |
-| `Option<T>` | `None` | `Some(parsed_value)` |
-| `T` + `#[env(deserializer = "fn")]` | Error | Parsed with custom function |
+| Type                                | When Env Var Missing | When Env Var Set            |
+| ----------------------------------- | -------------------- | --------------------------- |
+| `T` (no attribute)                  | Error                | Parsed with `FromStr`       |
+| `T` + `#[env(default)]`             | `Default::default()` | Parsed with `FromStr`       |
+| `T` + `#[env(default = value)]`     | Uses `value`         | Parsed with `FromStr`       |
+| `Option<T>`                         | `None`               | `Some(parsed_value)`        |
+| `T` + `#[env(deserializer = "fn")]` | Error                | Parsed with custom function |
 
 ## Combining Attributes
 
@@ -216,6 +220,7 @@ struct Config {
 ```
 
 **Invalid combinations** (compile errors):
+
 - `Option<T>` + `#[env(default)]` → Option already defaults to None
 - `#[env(deserializer = "...")]` + `#[env(default)]` → Not supported
 
@@ -223,17 +228,17 @@ struct Config {
 
 See the [`examples/`](examples/) directory for complete working examples:
 
-| Example | Features Demonstrated |
-|---------|----------------------|
-| [`basic.rs`](examples/basic.rs) | Required fields, explicit default values |
-| [`optional_fields.rs`](examples/optional_fields.rs) | `Option<T>` for optional fields |
-| [`default_trait.rs`](examples/default_trait.rs) | `#[env(default)]` using `Default` trait |
-| [`prefix.rs`](examples/prefix.rs) | `#[env(prefix = "...")]` at struct level |
-| [`file_based_secrets.rs`](examples/file_based_secrets.rs) | `#[env(from_file)]` for Kubernetes/Docker secrets |
-| [`custom_names.rs`](examples/custom_names.rs) | `#[env(name = "...")]` for custom env var names |
-| [`complex_types.rs`](examples/complex_types.rs) | `Vec`, `HashMap` with JSON deserializer |
-| [`custom_deserialize_fn.rs`](examples/custom_deserialize_fn.rs) | Custom deserializer functions |
-| [`comprehensive.rs`](examples/comprehensive.rs) | Multiple features combined |
+| Example                                                         | Features Demonstrated                             |
+| --------------------------------------------------------------- | ------------------------------------------------- |
+| [`basic.rs`](examples/basic.rs)                                 | Required fields, explicit default values          |
+| [`optional_fields.rs`](examples/optional_fields.rs)             | `Option<T>` for optional fields                   |
+| [`default_trait.rs`](examples/default_trait.rs)                 | `#[env(default)]` using `Default` trait           |
+| [`prefix.rs`](examples/prefix.rs)                               | `#[env(prefix = "...")]` at struct level          |
+| [`file_based_secrets.rs`](examples/file_based_secrets.rs)       | `#[env(from_file)]` for Kubernetes/Docker secrets |
+| [`custom_names.rs`](examples/custom_names.rs)                   | `#[env(name = "...")]` for custom env var names   |
+| [`complex_types.rs`](examples/complex_types.rs)                 | `Vec`, `HashMap` with JSON deserializer           |
+| [`custom_deserialize_fn.rs`](examples/custom_deserialize_fn.rs) | Custom deserializer functions                     |
+| [`comprehensive.rs`](examples/comprehensive.rs)                 | Multiple features combined                        |
 
 Run with: `cargo run --example <name>`
 
@@ -247,6 +252,7 @@ match Config::from_env() {
 ```
 
 Example errors:
+
 - `Environment variable 'DATABASE_URL' is required but not set`
 - `Failed to parse environment variable 'PORT' as u16: invalid digit found in string`
 - `Failed to read file '/etc/secrets/key' for environment variable 'API_KEY_FILE': No such file or directory`
