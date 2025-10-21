@@ -1,4 +1,11 @@
-//! Deserialization functions for environment variables
+//! Deserialization functions for environment variables.
+//!
+//! This module provides internal functions used by the `ServiceConf` derive macro
+//! to load and parse configuration values from environment variables.
+//!
+//! All functions in this module support the `{VAR}_FILE` pattern for file-based secrets,
+//! which is the primary feature distinguishing this library from other environment
+//! configuration solutions.
 
 use crate::error::ServiceConfError;
 use std::env;

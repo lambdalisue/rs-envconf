@@ -1,22 +1,40 @@
-//! Attribute parsing
+//! Attribute parsing for `#[conf(...)]` annotations.
+//!
+//! This module extracts and validates configuration attributes from struct fields
+//! during macro expansion.
 
 use syn::{Field, Lit};
 
-/// Field attributes
+/// Parsed `#[conf(...)]` attributes from a struct field.
+///
+/// Represents all configuration options that can be specified on individual fields
+/// of a `ServiceConf`-derived struct.
 #[derive(Debug, Default)]
 pub struct FieldAttrs {
-    /// Custom environment variable name
+    /// Custom environment variable name override.
+    ///
+    /// If `None`, the field name is converted to UPPER_SNAKE_CASE.
     pub name: Option<String>,
-    /// Default value: Some(Some(tokens)) = explicit value, Some(None) = use Default trait, None = required
+
+    /// Default value strategy:
+    /// - `None`: Field is required (no default)
+    /// - `Some(None)`: Use `Default::default()`
+    /// - `Some(Some(tokens))`: Use explicit token stream as default value
     pub default: Option<Option<proc_macro2::TokenStream>>,
-    /// File-based configuration support
+
+    /// Enable `{VAR}_FILE` pattern for reading secrets from mounted files.
     pub from_file: bool,
-    /// Custom deserializer function path
+
+    /// Custom deserializer function path (e.g., `"serde_json::from_str"`).
+    ///
+    /// When specified, bypasses `FromStr` and uses this function instead.
     pub deserializer: Option<String>,
 }
 
 impl FieldAttrs {
-    /// Parse attributes from a field
+    /// Extract and parse `#[conf(...)]` attributes from a struct field.
+    ///
+    /// Silently ignores unrecognized attributes to allow other macros to process them.
     pub fn from_field(field: &Field) -> Self {
         let mut attrs = Self::default();
 

@@ -1,4 +1,7 @@
-//! Derive macro implementation for serviceconf
+//! Derive macro implementation for serviceconf.
+//!
+//! This crate provides the `#[derive(ServiceConf)]` procedural macro which automatically
+//! generates environment variable loading code for configuration structs.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -8,7 +11,10 @@ mod attrs;
 
 use attrs::FieldAttrs;
 
-/// Extract inner type from Option<T>
+/// Extract the inner type `T` from `Option<T>`, returning the original type if not an Option.
+///
+/// This helper is used to generate correct error messages and deserializer calls
+/// for optional fields, where the inner type needs to be referenced separately.
 fn extract_option_inner_type(ty: &Type) -> &Type {
     if let Type::Path(type_path) = ty {
         if let Some(seg) = type_path.path.segments.last() {
