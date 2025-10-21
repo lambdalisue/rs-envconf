@@ -108,17 +108,32 @@ fn extract_option_inner_type(ty: &Type) -> &Type {
 ///
 /// The function signature must be: `fn(&str) -> Result<T, impl std::fmt::Display>`
 ///
+/// Can be combined with `default` to provide a fallback value, or used with `Option<T>`
+/// to make the field optional:
+///
 /// ```no_run
 /// use serviceconf::ServiceConf;
+/// use std::time::Duration;
 ///
-/// fn parse_list(s: &str) -> Result<Vec<String>, String> {
-///     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
+/// fn parse_duration_secs(s: &str) -> Result<Duration, String> {
+///     s.parse::<u64>()
+///         .map(Duration::from_secs)
+///         .map_err(|e| format!("Failed to parse: {}", e))
 /// }
 ///
 /// #[derive(ServiceConf)]
 /// struct Config {
-///     #[conf(deserializer = "parse_list")]
-///     pub items: Vec<String>,
+///     // Required field with custom deserializer
+///     #[conf(deserializer = "parse_duration_secs")]
+///     pub timeout: Duration,
+///
+///     // With default value (uses default when env var is not set)
+///     #[conf(deserializer = "parse_duration_secs", default = Duration::from_secs(60))]
+///     pub retry_interval: Duration,
+///
+///     // With Option<T> (None when env var is not set)
+///     #[conf(deserializer = "parse_duration_secs")]
+///     pub max_timeout: Option<Duration>,
 /// }
 /// ```
 ///
@@ -155,6 +170,49 @@ fn extract_option_inner_type(ty: &Type) -> &Type {
 ///     #[conf(default = 3000)]
 ///     pub port: u16,  // Reads from APP_PORT, defaults to 3000
 /// }
+/// ```
+///
+/// **With custom deserializer and default:**
+/// ```
+/// use serviceconf::ServiceConf;
+/// use std::time::Duration;
+///
+/// fn parse_duration_secs(s: &str) -> Result<Duration, String> {
+///     s.parse::<u64>()
+///         .map(Duration::from_secs)
+///         .map_err(|e| e.to_string())
+/// }
+///
+/// fn parse_comma_list(s: &str) -> Result<Vec<String>, String> {
+///     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
+/// }
+///
+/// #[derive(ServiceConf)]
+/// struct Config {
+///     // Custom deserializer with explicit default value
+///     #[conf(deserializer = "parse_duration_secs", default = Duration::from_secs(30))]
+///     pub timeout: Duration,
+///
+///     // Custom deserializer with Default::default()
+///     #[conf(deserializer = "parse_comma_list", default)]
+///     pub allowed_hosts: Vec<String>,
+/// }
+///
+/// // Uses default values when environment variables are not set
+/// std::env::remove_var("TIMEOUT");
+/// std::env::remove_var("ALLOWED_HOSTS");
+/// let config = Config::from_env().unwrap();
+/// assert_eq!(config.timeout, Duration::from_secs(30));
+/// assert_eq!(config.allowed_hosts, Vec::<String>::new());
+///
+/// // Override with environment variables
+/// std::env::set_var("TIMEOUT", "60");
+/// std::env::set_var("ALLOWED_HOSTS", "localhost, example.com");
+/// let config = Config::from_env().unwrap();
+/// assert_eq!(config.timeout, Duration::from_secs(60));
+/// assert_eq!(config.allowed_hosts, vec!["localhost", "example.com"]);
+/// # std::env::remove_var("TIMEOUT");
+/// # std::env::remove_var("ALLOWED_HOSTS");
 /// ```
 ///
 /// For complete documentation and more examples, see the [`serviceconf`](https://docs.rs/serviceconf) crate.
@@ -233,15 +291,6 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
             .to_compile_error()
             .into();
         }
-
-        if attrs.deserializer.is_some() && attrs.default.is_some() {
-            return syn::Error::new_spanned(
-                field,
-                "default value is not supported with deserializer attribute",
-            )
-            .to_compile_error()
-            .into();
-        }
     }
 
     // Generate deserialization code for each field
@@ -301,10 +350,35 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                 }
             } else {
                 // Non-Option with deserializer
-                quote! {
-                    {
-                        let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file)?;
-                        #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?
+                match attrs.default {
+                    Some(Some(default_value)) => {
+                        // Explicit default value with deserializer
+                        quote! {
+                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                                Ok(__value) => #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?,
+                                Err(::serviceconf::ServiceConfError::Missing { .. }) => #default_value,
+                                Err(e) => return Err(e.into()),
+                            }
+                        }
+                    }
+                    Some(None) => {
+                        // Use Default::default() with deserializer
+                        quote! {
+                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                                Ok(__value) => #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?,
+                                Err(::serviceconf::ServiceConfError::Missing { .. }) => Default::default(),
+                                Err(e) => return Err(e.into()),
+                            }
+                        }
+                    }
+                    None => {
+                        // Required field with deserializer
+                        quote! {
+                            {
+                                let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file)?;
+                                #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?
+                            }
+                        }
                     }
                 }
             }

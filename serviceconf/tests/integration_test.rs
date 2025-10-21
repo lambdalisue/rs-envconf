@@ -462,3 +462,52 @@ fn test_file_read_error() {
 
     env::remove_var("SECRET_FILE");
 }
+
+fn parse_duration_secs(s: &str) -> Result<std::time::Duration, String> {
+    s.parse::<u64>()
+        .map(std::time::Duration::from_secs)
+        .map_err(|e| format!("Failed to parse duration: {}", e))
+}
+
+#[derive(Debug, ServiceConf)]
+struct ConfigWithDeserializerAndDefault {
+    /// Test with English comment and deserializer + default
+    #[conf(deserializer = "parse_duration_secs", default = std::time::Duration::from_secs(60))]
+    pub timeout: std::time::Duration,
+
+    /// 日本語コメントでもdeserializer + defaultが動作することをテスト
+    #[conf(deserializer = "parse_duration_secs", default = std::time::Duration::from_secs(30))]
+    pub retry_interval: std::time::Duration,
+
+    /// Test with Default::default()
+    #[conf(deserializer = "comma_separated_deserializer", default)]
+    pub default_list: Vec<String>,
+}
+
+#[test]
+#[serial]
+fn test_deserializer_with_default() {
+    // Test 1: Use default values
+    env::remove_var("TIMEOUT");
+    env::remove_var("RETRY_INTERVAL");
+    env::remove_var("DEFAULT_LIST");
+
+    let config = ConfigWithDeserializerAndDefault::from_env().unwrap();
+    assert_eq!(config.timeout, std::time::Duration::from_secs(60));
+    assert_eq!(config.retry_interval, std::time::Duration::from_secs(30));
+    assert_eq!(config.default_list, Vec::<String>::new());
+
+    // Test 2: Override with environment variables
+    env::set_var("TIMEOUT", "120");
+    env::set_var("RETRY_INTERVAL", "90");
+    env::set_var("DEFAULT_LIST", "a, b, c");
+
+    let config = ConfigWithDeserializerAndDefault::from_env().unwrap();
+    assert_eq!(config.timeout, std::time::Duration::from_secs(120));
+    assert_eq!(config.retry_interval, std::time::Duration::from_secs(90));
+    assert_eq!(config.default_list, vec!["a", "b", "c"]);
+
+    env::remove_var("TIMEOUT");
+    env::remove_var("RETRY_INTERVAL");
+    env::remove_var("DEFAULT_LIST");
+}
