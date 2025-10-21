@@ -45,5 +45,5 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-workspace-crates: "true"
-      - run: cargo build --locked --release
+      - run: cargo build --release
     timeout-minutes: 15
