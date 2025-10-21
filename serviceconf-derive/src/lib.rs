@@ -207,6 +207,43 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
         }
     };
 
+    // Validate field attributes before code generation to avoid malformed error tokens
+    for field in fields.iter() {
+        let field_type = &field.ty;
+        let attrs = FieldAttrs::from_field(field);
+
+        // Check if type is Option<T>
+        let is_option = if let syn::Type::Path(type_path) = field_type {
+            type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident == "Option")
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        // Validate invalid attribute combinations
+        if is_option && attrs.default.is_some() {
+            return syn::Error::new_spanned(
+                field,
+                "Option<T> fields cannot have default attribute (they default to None automatically)",
+            )
+            .to_compile_error()
+            .into();
+        }
+
+        if attrs.deserializer.is_some() && attrs.default.is_some() {
+            return syn::Error::new_spanned(
+                field,
+                "default value is not supported with deserializer attribute",
+            )
+            .to_compile_error()
+            .into();
+        }
+    }
+
     // Generate deserialization code for each field
     let field_initializers = fields.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
@@ -236,15 +273,6 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
         let load_from_file = attrs.from_file;
         let deserializer_fn = attrs.deserializer;
 
-        // Check for invalid combinations
-        if is_option && attrs.default.is_some() {
-            return syn::Error::new_spanned(
-                field,
-                "Option<T> fields cannot have default attribute (they default to None automatically)"
-            )
-            .to_compile_error();
-        }
-
         // Generate deserialization expression
         let deserialize_expr = if is_option && deserializer_fn.is_none() {
             // Option<T> without deserializer
@@ -259,13 +287,6 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
         } else if let Some(func_path) = deserializer_fn {
             // Use custom deserializer function
             let func: proc_macro2::TokenStream = func_path.parse().unwrap();
-            if attrs.default.is_some() {
-                return syn::Error::new_spanned(
-                    field,
-                    "default value is not supported with deserializer attribute"
-                )
-                .to_compile_error();
-            }
 
             if is_option {
                 // Option<T> with deserializer

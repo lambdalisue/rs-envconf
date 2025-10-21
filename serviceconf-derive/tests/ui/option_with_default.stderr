@@ -1,0 +1,7 @@
+error: Option<T> fields cannot have default attribute (they default to None automatically)
+  --> tests/ui/option_with_default.rs:8:5
+   |
+ 8 | /     /// This should produce a clear error
+ 9 | |     #[conf(default = "fallback".to_string())]
+10 | |     pub optional_field: Option<String>,
+   | |______________________________________^
