@@ -223,8 +223,10 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
     // Struct name
     let struct_name = &input.ident;
 
-    // Parse struct-level attributes (prefix)
+    // Parse struct-level attributes (prefix, config_dir, config_dir_env)
     let mut prefix = String::new();
+    let mut config_dir: Option<String> = None;
+    let mut config_dir_env: Option<String> = None;
 
     for attr in &input.attrs {
         if !attr.path().is_ident("conf") {
@@ -237,6 +239,24 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                 let lit: syn::Lit = value.parse()?;
                 if let syn::Lit::Str(s) = lit {
                     prefix = s.value();
+                }
+                return Ok(());
+            }
+
+            if meta.path.is_ident("config_dir") {
+                let value = meta.value()?;
+                let lit: syn::Lit = value.parse()?;
+                if let syn::Lit::Str(s) = lit {
+                    config_dir = Some(s.value());
+                }
+                return Ok(());
+            }
+
+            if meta.path.is_ident("config_dir_env") {
+                let value = meta.value()?;
+                let lit: syn::Lit = value.parse()?;
+                if let syn::Lit::Str(s) = lit {
+                    config_dir_env = Some(s.value());
                 }
                 return Ok(());
             }
@@ -293,6 +313,38 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
         }
     }
 
+    // Generate config directory resolution code
+    let config_dir_resolution = if config_dir.is_some() || config_dir_env.is_some() {
+        match (config_dir, config_dir_env) {
+            (Some(dir), Some(env_var)) => {
+                // Both specified: use env var with fallback to hardcoded
+                quote! {
+                    let __config_dir = std::env::var(#env_var).unwrap_or_else(|_| #dir.to_string());
+                    let __config_dir_ref = Some(__config_dir.as_str());
+                }
+            }
+            (Some(dir), None) => {
+                // Only hardcoded directory
+                quote! {
+                    let __config_dir_ref = Some(#dir);
+                }
+            }
+            (None, Some(env_var)) => {
+                // Only env var, no fallback
+                quote! {
+                    let __config_dir = std::env::var(#env_var).ok();
+                    let __config_dir_ref = __config_dir.as_deref();
+                }
+            }
+            (None, None) => unreachable!(),
+        }
+    } else {
+        // No config directory specified
+        quote! {
+            let __config_dir_ref: Option<&str> = None;
+        }
+    };
+
     // Generate deserialization code for each field
     let field_initializers = fields.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
@@ -330,7 +382,8 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
             quote! {
                 ::serviceconf::de::deserialize_optional::<#inner_type>(
                     #env_var_name,
-                    #load_from_file
+                    #load_from_file,
+                    __config_dir_ref
                 )?
             }
         } else if let Some(func_path) = deserializer_fn {
@@ -342,7 +395,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                 let inner_type = extract_option_inner_type(field_type);
 
                 quote! {
-                    match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                    match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file, __config_dir_ref) {
                         Ok(__value) => Some(#func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#inner_type>(#env_var_name, e))?),
                         Err(::serviceconf::ServiceConfError::Missing { .. }) => None,
                         Err(e) => return Err(e.into()),
@@ -354,7 +407,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                     Some(Some(default_value)) => {
                         // Explicit default value with deserializer
                         quote! {
-                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file, __config_dir_ref) {
                                 Ok(__value) => #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?,
                                 Err(::serviceconf::ServiceConfError::Missing { .. }) => #default_value,
                                 Err(e) => return Err(e.into()),
@@ -364,7 +417,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                     Some(None) => {
                         // Use Default::default() with deserializer
                         quote! {
-                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file) {
+                            match ::serviceconf::de::get_env_value(#env_var_name, #load_from_file, __config_dir_ref) {
                                 Ok(__value) => #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?,
                                 Err(::serviceconf::ServiceConfError::Missing { .. }) => Default::default(),
                                 Err(e) => return Err(e.into()),
@@ -375,7 +428,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                         // Required field with deserializer
                         quote! {
                             {
-                                let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file)?;
+                                let __value = ::serviceconf::de::get_env_value(#env_var_name, #load_from_file, __config_dir_ref)?;
                                 #func(&__value).map_err(|e| ::serviceconf::ServiceConfError::parse_error::<#field_type>(#env_var_name, e))?
                             }
                         }
@@ -391,6 +444,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                         ::serviceconf::de::deserialize_with_default::<#field_type>(
                             #env_var_name,
                             #load_from_file,
+                            __config_dir_ref,
                             #default_value
                         )?
                     }
@@ -401,6 +455,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                         ::serviceconf::de::deserialize_with_default::<#field_type>(
                             #env_var_name,
                             #load_from_file,
+                            __config_dir_ref,
                             Default::default()
                         )?
                     }
@@ -410,7 +465,8 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
                     quote! {
                         ::serviceconf::de::deserialize_required::<#field_type>(
                             #env_var_name,
-                            #load_from_file
+                            #load_from_file,
+                            __config_dir_ref
                         )?
                     }
                 }
@@ -433,6 +489,7 @@ pub fn derive_serviceconf(input: TokenStream) -> TokenStream {
             /// - Environment variable values cannot be parsed into target types
             /// - File-based configuration fails to read files
             pub fn from_env() -> ::serviceconf::anyhow::Result<Self> {
+                #config_dir_resolution
                 Ok(Self {
                     #(#field_initializers),*
                 })

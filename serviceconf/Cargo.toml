@@ -57,3 +57,7 @@ path = "../examples/optional_fields.rs"
 [[example]]
 name = "prefix"
 path = "../examples/prefix.rs"
+
+[[example]]
+name = "config_dir"
+path = "../examples/config_dir.rs"
