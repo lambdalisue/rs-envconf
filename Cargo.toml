@@ -23,5 +23,5 @@ quote = "1.0"
 syn = { version = "2.0", features = ["full", "extra-traits"] }
 
 # Test dependencies
-serial_test = "3.2"
+serial_test = "4.0"
 tempfile = "3.0"
